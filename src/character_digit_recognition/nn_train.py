@@ -16,6 +16,10 @@ if __name__ == "__main__":
         data, labels = generate_training_data('/Users/zifwang/Desktop/Smart Parking/data/dataset_character_digit')
     x_train, x_validation, y_train, y_validation = train_test_split(data, labels, test_size=0.1, random_state=42)
 
+    print(x_train.shape)
+    print(x_validation.shape)
+    print(y_train.shape)
+    print(y_validation.shape)
 
     # x_train = x_train.T
     # x_validation = x_validation.T
