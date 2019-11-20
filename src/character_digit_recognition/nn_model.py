@@ -212,17 +212,18 @@ class neural_network_model(object):
 
         return history
 
-    def save_model(self, filename='model.npz'):
-        """Save weights, biases and hyperparameters of neural network to a
-        compressed binary. This ``.npz`` binary is saved in 'models' directory.
-        Parameters
-        ----------
-        filename : str, optional
-            Name of the ``.npz`` compressed binary in to be saved.
+    def save_model(self, filename='model.npy'):
         """
-        np.savez_compressed(
-            file=os.path.join(os.curdir, 'models', filename),
-            parameters = self.parameters,
-            activations = self.activations_functions,
-            number_of_layers = self.number_of_layers
-        )
+        """
+        model_dictionary = {'parameters':self.parameters, 'activations':self.activations_functions, 'num_layers':self.number_of_layers}
+        np.save(filename,model_dictionary)
+
+
+    def load_model(self, filename='model.npy'):
+        """
+        """
+        nnModel = np.load(filename).item()
+        self.parameters = nnModel['parameters']
+        self.activations_functions = nnModel['activations']
+        self.number_of_layers = nnModel['num_layers']
+
