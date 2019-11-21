@@ -23,10 +23,7 @@ class license_plate(object):
 		self.__image_gray = image
 
 		self.__license_plate_characters_list = []
-		"""
-			private function
-		"""
-		self.__preprocess()
+
 
 	"""
 		Getter function
@@ -67,36 +64,84 @@ class license_plate(object):
 		"""
 		return self.__license_plate_characters_list
 
-
-	"""
-		Private Functions
-	"""
-	def __preprocess(self):
+	def preprocess(self, image_ori):
+		height, width, channels = image_ori.shape
 		""" 1. Image to Gray Scale """
-		image_HSV = np.zeros((self.__image_height,self.__image_width,3), np.uint8)
-		image_HSV = cv2.cvtColor(self.__image_height, cv2.COLOR_BGR2HSV)
+		image_HSV = np.zeros((height,width,3), np.uint8)
+		image_HSV = cv2.cvtColor(height, cv2.COLOR_BGR2HSV)
 
-		_, _, self.__image_gray = cv2.split(image_HSV)
+		_, _, image_gray = cv2.split(image_HSV)
 
 		""" 2. Get maximize contrast image """
-		image_black_hat = np.zeros((self.__image_height,self.__image_width,1), np.uint8)
-		image_top_hat = np.zeros((self.__image_height,self.__image_width,1), np.uint8)
+		image_black_hat = np.zeros((height,width,1), np.uint8)
+		image_top_hat = np.zeros((height,width,1), np.uint8)
 
 		structuring_elements = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-		image_top_hat = cv2.morphologyEx(self.__image_gray, cv2.MORPH_TOPHAT, structuring_elements)
-		image_black_hat = cv2.morphologyEx(self.__image_gray, cv2.MORPH_BLACKHAT, structuring_elements)
+		image_top_hat = cv2.morphologyEx(image_gray, cv2.MORPH_TOPHAT, structuring_elements)
+		image_black_hat = cv2.morphologyEx(image_gray, cv2.MORPH_BLACKHAT, structuring_elements)
 
-		image_gray_with_top_hat = cv2.add(self.__image_gray, image_top_hat)
+		image_gray_with_top_hat = cv2.add(image_gray, image_top_hat)
 		self.__image_maximize_contrast = cv2.subtract(image_gray_with_top_hat, image_black_hat)
 
 		""" 3. Blur Image & Thresh Image """
-		image_blur = np.zeros((self.__image_height,self.__image_width,1), np.uint8)
+		image_blur = np.zeros((height,width,1), np.uint8)
 		image_blur = cv2.GaussianBlur(self.__image_maximize_contrast, (5,5), 0)
-		self.__image_thresh = cv2.adaptiveThreshold(image_blur, 255.0, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 19, 9)
+		image_thresh = cv2.adaptiveThreshold(image_blur, 255.0, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 19, 9)
 
-if __name__ == '__main__':
-	img = cv2.imread('/Users/zifwang/Desktop/Smart Parking/data/plates/PENNSYLVANIA.jpg')
-	licensePlate = license_plate(img)
-	character_list = licensePlate.get_license_plate_characters_list()
+		return image_gray, image_thresh
+	
+	def detect_possible_plates(self, image_ori):
+		possbile_plate_list = []
 
-	print(len(character_list))
+		height, width, channels = image_ori.shape
+
+		grayImage = np.zeros((height,width,1), np.uint8)
+		threshImage = np.zeros((height,width,1), np.uint8)
+
+		grayImage, threshImage = self.preprocess(image_ori)
+		self.__image_gray = grayImage
+		self.__image_thresh = threshImage
+
+
+
+
+
+
+
+
+
+
+
+
+
+		return possbile_plate_list
+
+
+	def find_possible_chars_in_scene(self, image_thresh):
+		possible_char_list = []
+
+		possible_char_counter = 0
+
+		image_thresh_copy = image_thresh.copy()
+
+		# find all contours
+		_, contours, _ = cv2.findContours(image_thresh_copy, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)   
+
+		for contour in contours:
+
+
+
+
+
+
+
+
+
+
+
+# if __name__ == '__main__':
+# 	img = cv2.imread('/Users/zifwang/Desktop/Smart Parking/data/plates/PENNSYLVANIA.jpg')
+# 	licensePlate = license_plate(img)
+# 	character_list = licensePlate.get_license_plate_characters_list()
+
+# 	print(len(character_list))
