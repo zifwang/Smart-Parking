@@ -5,7 +5,7 @@ from possible_characters import possible_characters
 from possible_plates import possible_plates
 import keras
 from keras.models import load_model
-# from character_digit_recognition.nn_model import neural_network_model
+import nn_model
 
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
@@ -328,6 +328,7 @@ class license_plate(object):
 		
 		for possible_plate in possible_plate_list:
 			possible_plate.image_gray, possible_plate.image_thresh = self.preprocess(possible_plate.image_license_plate)
+			possible_plate.image_gray = cv2.resize(possible_plate.image_gray, (0, 0), fx = 1.6, fy = 1.6)
 			possible_plate.image_thresh = cv2.resize(possible_plate.image_thresh, (0, 0), fx = 1.6, fy = 1.6)
 			_, possible_plate.image_thresh = cv2.threshold(possible_plate.image_thresh, 0.0, 255.0, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 			listOfPossibleCharsInPlate = self.__findPossibleCharsInPlate(possible_plate.image_gray, possible_plate.image_thresh)
@@ -350,46 +351,55 @@ class license_plate(object):
 					intIndexOfLongestListOfChars = i
 
 			longestListOfMatchingCharsInPlate = listOfListsOfMatchingCharsInPlate[intIndexOfLongestListOfChars]
-			possible_plate.possible_chars = self.__recognizeCharsInPlate(possible_plate.image_thresh,longestListOfMatchingCharsInPlate)
+			possible_plate.possible_chars = self.__recognizeCharsInPlate(possible_plate.image_gray,longestListOfMatchingCharsInPlate)
 
 
 		return possible_plate_list
 			
 	def __recognizeCharsInPlate(self, imgThresh, listOfMatchingChars):
 		license_plate_characters = ''           
-		height, width = imgThresh.shape
 
-		imgThreshColor = np.zeros((height, width, 3), np.uint8)
+		def binarize_image(np_array, threshold = 200):
+			for i in range(len(np_array)):
+				for j in range(len(np_array[0])):
+					if np_array[i][j] > threshold:
+						np_array[i][j] = 0
+					else:
+						np_array[i][j] = 255
+			return np_array
+		
+		imgThresh = binarize_image(imgThresh,100)
 
 		listOfMatchingChars.sort(key = lambda matchingChar: matchingChar.intCenterX)        # sort chars from left to right
 
-		cv2.cvtColor(imgThresh, cv2.COLOR_GRAY2BGR, imgThreshColor)                     # make color version of threshold image so we can draw contours in color on it
-
 		keras_model = load_model('../model/cnn_classifier.h5')
+		# character_rec_model = nn_model.neural_network_model()
+		# character_rec_model.load_model()
 		alphabets_dict = {0:'0', 1:'1', 2:'2', 3:'3', 4:'4', 5:'5', 6:'6', 7:'7', 8:'8', 9:'9', 10:'A', 11:'B', 12:'C', 13:'D',
                       14:'E', 15:'F', 16:'G', 17:'H', 18:'I', 19:'J', 20:'K', 21:'L', 22:'M', 23:'N', 24:'O', 25:'P', 26: 'Q', 
                       27:'R', 28:'S', 29:'T', 30:'U', 31:'V', 32:'W', 33:'X', 34:'Y', 35: 'Z'}
-    
+
+		EXTENSION = 10
+
 		for currentChar in listOfMatchingChars:                                         # for each char in plate
-			pt1 = (currentChar.intBoundingRectX, currentChar.intBoundingRectY)
-			pt2 = ((currentChar.intBoundingRectX + currentChar.intBoundingRectWidth), (currentChar.intBoundingRectY + currentChar.intBoundingRectHeight))
 
-			cv2.rectangle(imgThreshColor, pt1, pt2, (0.0, 255.0, 0.0), 2)           # draw green box around the char
+			if currentChar.intBoundingRectY - EXTENSION > 0 and currentChar.intBoundingRectY + currentChar.intBoundingRectHeight + EXTENSION < imgThresh.shape[0] and currentChar.intBoundingRectX - EXTENSION > 0 and currentChar.intBoundingRectX + currentChar.intBoundingRectWidth + EXTENSION < imgThresh.shape[1]:
+				imgROI = imgThresh[currentChar.intBoundingRectY -EXTENSION: currentChar.intBoundingRectY + currentChar.intBoundingRectHeight+EXTENSION,
+							currentChar.intBoundingRectX -EXTENSION: currentChar.intBoundingRectX + currentChar.intBoundingRectWidth+EXTENSION]
+			else:
+				continue
 
-			imgROI = imgThresh[currentChar.intBoundingRectY : currentChar.intBoundingRectY + currentChar.intBoundingRectHeight,
-							currentChar.intBoundingRectX : currentChar.intBoundingRectX + currentChar.intBoundingRectWidth]
-
+			cv2.imshow('char', imgROI)
+			cv2.waitKey(0)
 			imgROIResized = cv2.resize(imgROI, (RESIZED_CHAR_IMAGE_WIDTH, RESIZED_CHAR_IMAGE_HEIGHT))           # resize image, this is necessary for char recognition
-			
+			npaROIResized = imgROIResized.reshape((1,RESIZED_CHAR_IMAGE_WIDTH*RESIZED_CHAR_IMAGE_HEIGHT))
 			npaROIResized = imgROIResized.reshape((1,RESIZED_CHAR_IMAGE_WIDTH, RESIZED_CHAR_IMAGE_HEIGHT,1))     
 			
 			prediction = keras_model.predict(npaROIResized)
+			# prediction = character_rec_model.predict(npaROIResized.T,character_rec_model.parameters,character_rec_model.activations_functions)
 			predict_char = alphabets_dict[np.argmax(prediction.T)]
 			license_plate_characters = license_plate_characters + predict_char
-			# print("The digit in the following figure is: ", alphabets_dict[np.argmax(prediction.T)])
-			
-			# cv2.imshow('char',imgROIResized)
-			# cv2.waitKey(0)
+
 
 		return license_plate_characters
 
@@ -403,12 +413,6 @@ class license_plate(object):
 			possbile_plate_list.sort(key = lambda possible_plates: len(possible_plates.possible_chars), reverse = True)
 			licPlate = possbile_plate_list[0]
 			self.__license_plate_character = licPlate.possible_chars
-			cv2.imshow("imgPlate", licPlate.image_license_plate)
-			cv2.waitKey(0)
-			cv2.imshow("imgThresh", licPlate.image_thresh)
-			cv2.waitKey(0)
-			cv2.imshow("imagegray", licPlate.image_gray)
-			cv2.waitKey(0)
 
 
 
