@@ -5,7 +5,7 @@ from possible_characters import possible_characters
 from possible_plates import possible_plates
 import keras
 from keras.models import load_model
-import nn_model
+from src.character_digit_recognition.nn_model import nn_model
 
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
