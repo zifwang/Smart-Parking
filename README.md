@@ -10,3 +10,6 @@
 
 ## AWS IoT, S3, and Lambda
 	Final decide car parking location
+
+## Easy Implementation:
+	Code in the folder "AWS IoT License" is the simplest license plate detection method.
